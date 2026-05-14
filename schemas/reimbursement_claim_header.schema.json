@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copious.local/schemas/reimbursement_claim_header.schema.json",
+  "title": "ReimbursementClaimHeader",
+  "description": "Top-of-sheet claim metadata (rows 1–4 in the sample workbook). Line items are modeled separately.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "fullName": {
+      "type": "string",
+      "description": "Employee full name (paired with label FULL NAME)."
+    },
+    "peopleId": {
+      "type": "string",
+      "description": "People / employee id (paired with label PEOPLE ID)."
+    },
+    "reviewer": {
+      "type": "string",
+      "description": "Reviewer name(s)."
+    },
+    "approver": {
+      "type": "string",
+      "description": "Approver name(s); may be a long concatenated string in the template."
+    },
+    "reimbursementCurrency": {
+      "type": "string",
+      "description": "Claim-level reimbursement currency code, e.g. INR."
+    },
+    "reimbursementAmount": {
+      "type": "number",
+      "description": "Total reimbursement amount for the claim in reimbursementCurrency."
+    },
+    "claimStatus": {
+      "type": "string",
+      "description": "Human-readable claim status, e.g. '0. New'."
+    },
+    "reimbursementDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Claim reimbursement date (ISO-8601 date). The exported XLSX used a serial number in the cell; when writing to Sheets you may store as a date cell or as a serial depending on sheet formatting."
+    }
+  },
+  "required": [
+    "fullName",
+    "peopleId",
+    "reimbursementCurrency",
+    "reimbursementAmount",
+    "claimStatus",
+    "reimbursementDate"
+  ]
+}

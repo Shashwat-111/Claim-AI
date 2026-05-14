@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://copious.local/schemas/reimbursement_expense_line.schema.json",
+  "title": "ReimbursementExpenseLine",
+  "description": "One expense line matching the line-item table header row (EXPENSE DATE … AMOUNT IN USD) in the sample workbook.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "expenseDate": {
+      "type": "string",
+      "format": "date",
+      "description": "Expense date as ISO-8601 calendar date (yyyy-MM-dd). Maps to column EXPENSE DATE."
+    },
+    "status": {
+      "type": "string",
+      "description": "Column B (STATUS). Optional on upload; use empty string or omit. When set, must match sheet list (Approved, Query, Declined)."
+    },
+    "category": {
+      "type": "string",
+      "description": "Expense category, e.g. Software Subscription."
+    },
+    "expenseMode": {
+      "type": "string",
+      "description": "How the expense was paid, e.g. Personal Card."
+    },
+    "particulars": {
+      "type": "string",
+      "description": "Short description of the expense."
+    },
+    "invoiceCurrency": {
+      "type": "string",
+      "description": "ISO currency code on the invoice, e.g. USD, INR."
+    },
+    "invoiceAmount": {
+      "type": "number",
+      "description": "Amount in invoiceCurrency."
+    },
+    "invoiceAvailable": {
+      "type": "boolean",
+      "description": "Whether an invoice is available; written to the sheet as Yes/No to match the sample."
+    },
+    "reimbursementRequired": {
+      "type": "boolean",
+      "description": "Whether reimbursement is required; written as TRUE/FALSE in column I to match checkbox cells."
+    },
+    "billedCurrency": {
+      "type": "string",
+      "description": "Currency used for billed amount, e.g. INR."
+    },
+    "billedAmount": {
+      "type": "number",
+      "description": "Billed amount in billedCurrency."
+    },
+    "invoiceLink": {
+      "type": "string",
+      "description": "Invoice link(s), e.g. Google Drive filenames or URLs in column INVOICE LINK (G-DRIVE)."
+    },
+    "reimbursementCurrencyAmount": {
+      "type": "number",
+      "description": "Amount converted to the claim reimbursement currency (column REIMBURSEMENT CURRENCY AMOUNT)."
+    },
+    "amountUsd": {
+      "type": "number",
+      "description": "Amount in USD (column AMOUNT IN USD)."
+    }
+  },
+  "required": [
+    "expenseDate",
+    "category",
+    "expenseMode",
+    "particulars",
+    "invoiceCurrency",
+    "invoiceAmount",
+    "invoiceAvailable",
+    "reimbursementRequired",
+    "billedCurrency",
+    "billedAmount",
+    "invoiceLink",
+    "reimbursementCurrencyAmount",
+    "amountUsd"
+  ]
+}
