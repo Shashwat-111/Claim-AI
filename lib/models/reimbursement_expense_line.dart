@@ -72,6 +72,41 @@ class ReimbursementExpenseLine {
         'amountUsd': amountUsd,
       };
 
+  ReimbursementExpenseLine copyWith({
+    DateTime? expenseDate,
+    String? status,
+    String? category,
+    String? expenseMode,
+    String? particulars,
+    String? invoiceCurrency,
+    double? invoiceAmount,
+    bool? invoiceAvailable,
+    bool? reimbursementRequired,
+    String? billedCurrency,
+    double? billedAmount,
+    String? invoiceLink,
+    double? reimbursementCurrencyAmount,
+    double? amountUsd,
+  }) {
+    return ReimbursementExpenseLine(
+      expenseDate: expenseDate ?? this.expenseDate,
+      status: status ?? this.status,
+      category: category ?? this.category,
+      expenseMode: expenseMode ?? this.expenseMode,
+      particulars: particulars ?? this.particulars,
+      invoiceCurrency: invoiceCurrency ?? this.invoiceCurrency,
+      invoiceAmount: invoiceAmount ?? this.invoiceAmount,
+      invoiceAvailable: invoiceAvailable ?? this.invoiceAvailable,
+      reimbursementRequired: reimbursementRequired ?? this.reimbursementRequired,
+      billedCurrency: billedCurrency ?? this.billedCurrency,
+      billedAmount: billedAmount ?? this.billedAmount,
+      invoiceLink: invoiceLink ?? this.invoiceLink,
+      reimbursementCurrencyAmount:
+          reimbursementCurrencyAmount ?? this.reimbursementCurrencyAmount,
+      amountUsd: amountUsd ?? this.amountUsd,
+    );
+  }
+
   /// Values for columns **A through L** only (user-entered cells). Columns M
   /// onward are left to sheet formulas after a template row copy.
   List<Object?> toUserInputRowAtoL() {

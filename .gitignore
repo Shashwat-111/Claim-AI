@@ -46,3 +46,6 @@ app.*.map.json
 
 # Google Cloud service account (never commit real keys)
 assets/secrets/google_service_account.json
+
+# Optional: local Gemini key file (change gemini_config.dart to import it instead of the example)
+lib/config/gemini_secrets.dart

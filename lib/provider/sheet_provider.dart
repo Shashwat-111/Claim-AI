@@ -13,11 +13,6 @@ class SheetProvider extends ChangeNotifier {
   GoogleSheetsService? _service;
   String? _initError;
 
-  List<String> importCategories = [];
-  List<String> importCurrencies = [];
-  String? dropdownListsMessage;
-  String? dropdownListsError;
-
   bool _busy = false;
   String? _lastMessage;
   String? _lastError;
@@ -45,39 +40,6 @@ class SheetProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Loads category (column A) and currency (column B) lists from the Import Range tab.
-  Future<void> loadImportListOptions() async {
-    dropdownListsMessage = null;
-    dropdownListsError = null;
-    await ensureInitialized();
-    if (_service == null) {
-      dropdownListsError = _initError ?? 'Sheets client not initialized.';
-      notifyListeners();
-      return;
-    }
-    _busy = true;
-    notifyListeners();
-    try {
-      final id = SheetConfig.spreadsheetId;
-      final imp = SheetConfig.importRangeTab;
-      importCategories = await _service!.readDistinctColumn(
-        id,
-        '${SheetConfig.quoteTab(imp)}!A2:A200',
-      );
-      importCurrencies = await _service!.readDistinctColumn(
-        id,
-        '${SheetConfig.quoteTab(imp)}!B2:B200',
-      );
-      dropdownListsMessage =
-          'Loaded ${importCategories.length} categories, ${importCurrencies.length} currencies from "$imp".';
-    } catch (e) {
-      dropdownListsError = e.toString();
-    } finally {
-      _busy = false;
-      notifyListeners();
-    }
-  }
-
   /// Inserts a row immediately **above** the TOTAL row (auto-detect in column D from row 7).
   Future<void> insertLineAboveTotal(ReimbursementExpenseLine line) async {
     _lastError = null;
@@ -101,6 +63,49 @@ class SheetProvider extends ChangeNotifier {
           '(row copied for format & formulas; only A–L filled from the app).';
     } catch (e) {
       _lastError = e.toString();
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
+  /// Inserts each line **sequentially** above the current TOTAL row (row moves after each insert).
+  Future<void> insertAllLinesAboveTotal(
+    List<ReimbursementExpenseLine> lines, {
+    void Function(int completed, int total)? onProgress,
+  }) async {
+    _lastError = null;
+    _lastMessage = null;
+    await ensureInitialized();
+    if (_service == null) {
+      _lastError = _initError ?? 'Sheets client not initialized.';
+      notifyListeners();
+      return;
+    }
+    if (lines.isEmpty) {
+      _lastMessage = 'Nothing to insert.';
+      notifyListeners();
+      return;
+    }
+    _busy = true;
+    notifyListeners();
+    var completed = 0;
+    try {
+      for (var i = 0; i < lines.length; i++) {
+        await _service!.insertExpenseLineAboveTotal(
+          spreadsheetId: SheetConfig.spreadsheetId,
+          tabName: SheetConfig.claimTabName,
+          line: lines[i],
+          manualInsertBeforeOneBasedRow: null,
+        );
+        completed = i + 1;
+        onProgress?.call(completed, lines.length);
+        notifyListeners();
+      }
+      _lastMessage =
+          'Inserted $completed line(s) above TOTAL on ${SheetConfig.claimTabName} (A–L filled each time).';
+    } catch (e) {
+      _lastError = 'After $completed successful insert(s): $e';
     } finally {
       _busy = false;
       notifyListeners();

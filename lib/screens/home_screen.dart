@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
+import '../config/sheet_static_options.dart';
 import '../models/copious_sheet_valid_options.dart';
 import '../models/reimbursement_expense_line.dart';
 import '../models/reimbursement_sheet_layout.dart';
 import '../provider/sheet_provider.dart';
 
+/// Manual expense entry (opened from chat screen settings).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -20,10 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final _particularsCtrl = TextEditingController(text: 'Example expense');
   final _invoiceLinkCtrl = TextEditingController();
 
-  final _categoryManualCtrl = TextEditingController(text: 'Software Subscription');
-  final _invoiceCurrencyManualCtrl = TextEditingController(text: 'USD');
-  final _billedCurrencyManualCtrl = TextEditingController(text: 'INR');
-
   final _invoiceAmountCtrl = TextEditingController(text: '10');
   final _billedAmountCtrl = TextEditingController(text: '800');
 
@@ -32,50 +30,17 @@ class _HomeScreenState extends State<HomeScreen> {
   String _expenseMode = CopiousSheetValidOptions.expenseModes.first;
   String _invoiceAvailableLabel = CopiousSheetValidOptions.invoiceAvailableLabels.first;
 
-  String _category = 'Software Subscription';
-  String _invoiceCurrency = 'USD';
-  String _billedCurrency = 'INR';
+  String _category = SheetStaticOptions.importCategories.first;
+  String _invoiceCurrency = SheetStaticOptions.importCurrencies.first;
+  String _billedCurrency = SheetStaticOptions.importCurrencies.first;
+  String _statusSelection = '';
 
   bool _reimbursementRequired = true;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = context.read<SheetProvider>();
-      await provider.loadImportListOptions();
-      if (!mounted) return;
-      setState(_syncSelectionsAfterImportLoad);
-    });
-  }
-
-  void _syncSelectionsAfterImportLoad() {
-    final p = context.read<SheetProvider>();
-    if (p.importCategories.isNotEmpty) {
-      if (!p.importCategories.contains(_category)) {
-        _category = p.importCategories.first;
-      }
-    }
-    if (p.importCurrencies.isNotEmpty) {
-      if (!p.importCurrencies.contains(_invoiceCurrency)) {
-        _invoiceCurrency = p.importCurrencies.first;
-      }
-      if (!p.importCurrencies.contains(_billedCurrency)) {
-        _billedCurrency = p.importCurrencies.first;
-      }
-    }
-    _categoryManualCtrl.text = _category;
-    _invoiceCurrencyManualCtrl.text = _invoiceCurrency;
-    _billedCurrencyManualCtrl.text = _billedCurrency;
-  }
 
   @override
   void dispose() {
     _particularsCtrl.dispose();
     _invoiceLinkCtrl.dispose();
-    _categoryManualCtrl.dispose();
-    _invoiceCurrencyManualCtrl.dispose();
-    _billedCurrencyManualCtrl.dispose();
     _invoiceAmountCtrl.dispose();
     _billedAmountCtrl.dispose();
     super.dispose();
@@ -93,27 +58,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   ReimbursementExpenseLine _lineFromForm() {
     double parseMoney(String s) => double.tryParse(s.trim()) ?? 0;
-    final p = context.read<SheetProvider>();
-    final category = p.importCategories.isEmpty ? _categoryManualCtrl.text.trim() : _category;
-    final invCur = p.importCurrencies.isEmpty
-        ? _invoiceCurrencyManualCtrl.text.trim().toUpperCase()
-        : _invoiceCurrency.trim().toUpperCase();
-    final billedCur = p.importCurrencies.isEmpty
-        ? _billedCurrencyManualCtrl.text.trim().toUpperCase()
-        : _billedCurrency.trim().toUpperCase();
     return ReimbursementExpenseLine(
       expenseDate: _expenseDate,
-      category: category,
+      status: _statusSelection,
+      category: _category,
       expenseMode: _expenseMode,
       particulars: _particularsCtrl.text.trim(),
-      invoiceCurrency: invCur,
+      invoiceCurrency: _invoiceCurrency,
       invoiceAmount: parseMoney(_invoiceAmountCtrl.text),
       invoiceAvailable: _invoiceAvailableLabel == 'Yes',
       reimbursementRequired: _reimbursementRequired,
-      billedCurrency: billedCur,
+      billedCurrency: _billedCurrency,
       billedAmount: parseMoney(_billedAmountCtrl.text),
       invoiceLink: _invoiceLinkCtrl.text.trim(),
-      // Sheet formulas in columns M+ compute these after insert+copy.
       reimbursementCurrencyAmount: 0,
       amountUsd: 0,
     );
@@ -126,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Copious ReimburseAI'),
+        title: const Text('Manual expense'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -155,77 +112,68 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                OutlinedButton.icon(
-                  onPressed: provider.busy
-                      ? null
-                      : () async {
-                          await provider.loadImportListOptions();
-                          if (mounted) setState(_syncSelectionsAfterImportLoad);
-                        },
-                  icon: const Icon(Icons.refresh, size: 18),
-                  label: const Text('Reload category / currency lists'),
-                ),
-                if (provider.dropdownListsMessage != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(provider.dropdownListsMessage!, style: const TextStyle(color: Colors.green)),
-                  ),
-                if (provider.dropdownListsError != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      provider.dropdownListsError!,
-                      style: TextStyle(color: Theme.of(context).colorScheme.error),
-                    ),
-                  ),
-                const SizedBox(height: 16),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text('Expense date: ${df.format(_expenseDate)}'),
                   trailing: TextButton(onPressed: _pickDate, child: const Text('Change')),
                 ),
-                if (provider.importCategories.isEmpty)
-                  TextFormField(
-                    controller: _categoryManualCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Category (type manually if lists not loaded)',
-                      border: OutlineInputBorder(),
-                    ),
-                  )
-                else
-                  InputDecorator(
-                    decoration: const InputDecoration(
-                      labelText: 'Category (from Import tab col A)',
-                      border: OutlineInputBorder(),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        isExpanded: true,
-                        value: provider.importCategories.contains(_category)
-                            ? _category
-                            : provider.importCategories.first,
-                        items: [
-                          for (final c in provider.importCategories)
-                            DropdownMenuItem(value: c, child: Text(c)),
-                        ],
-                        onChanged: (v) {
-                          if (v != null) setState(() => _category = v);
-                        },
-                      ),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Category (Import Range)',
+                    border: OutlineInputBorder(),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _category,
+                      items: [
+                        for (final c in SheetStaticOptions.importCategories)
+                          DropdownMenuItem(value: c, child: Text(c)),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _category = v);
+                      },
                     ),
                   ),
+                ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _expenseMode,
+                InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Expense mode (validated)',
                     border: OutlineInputBorder(),
                   ),
-                  items: [
-                    for (final m in CopiousSheetValidOptions.expenseModes)
-                      DropdownMenuItem(value: m, child: Text(m)),
-                  ],
-                  onChanged: (v) => setState(() => _expenseMode = v ?? _expenseMode),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _expenseMode,
+                      items: [
+                        for (final m in CopiousSheetValidOptions.expenseModes)
+                          DropdownMenuItem(value: m, child: Text(m)),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _expenseMode = v);
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'STATUS (optional, validated)',
+                    border: OutlineInputBorder(),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _statusSelection,
+                      items: [
+                        const DropdownMenuItem(value: '', child: Text('(blank)')),
+                        for (final s in CopiousSheetValidOptions.lineStatusOptions)
+                          DropdownMenuItem(value: s, child: Text(s)),
+                      ],
+                      onChanged: (v) => setState(() => _statusSelection = v ?? ''),
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -236,35 +184,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: provider.importCurrencies.isEmpty
-                          ? TextFormField(
-                              controller: _invoiceCurrencyManualCtrl,
-                              decoration: const InputDecoration(
-                                labelText: 'Invoice currency',
-                                border: OutlineInputBorder(),
-                              ),
-                            )
-                          : InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Invoice currency',
-                                border: OutlineInputBorder(),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: provider.importCurrencies.contains(_invoiceCurrency)
-                                      ? _invoiceCurrency
-                                      : provider.importCurrencies.first,
-                                  items: [
-                                    for (final c in provider.importCurrencies)
-                                      DropdownMenuItem(value: c, child: Text(c)),
-                                  ],
-                                  onChanged: (v) {
-                                    if (v != null) setState(() => _invoiceCurrency = v);
-                                  },
-                                ),
-                              ),
-                            ),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Invoice currency',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _invoiceCurrency,
+                            items: [
+                              for (final c in SheetStaticOptions.importCurrencies)
+                                DropdownMenuItem(value: c, child: Text(c)),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) setState(() => _invoiceCurrency = v);
+                            },
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -280,17 +218,24 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                DropdownButtonFormField<String>(
-                  initialValue: _invoiceAvailableLabel,
+                InputDecorator(
                   decoration: const InputDecoration(
                     labelText: 'Invoice available? (validated)',
                     border: OutlineInputBorder(),
                   ),
-                  items: [
-                    for (final y in CopiousSheetValidOptions.invoiceAvailableLabels)
-                      DropdownMenuItem(value: y, child: Text(y)),
-                  ],
-                  onChanged: (v) => setState(() => _invoiceAvailableLabel = v ?? _invoiceAvailableLabel),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _invoiceAvailableLabel,
+                      items: [
+                        for (final y in CopiousSheetValidOptions.invoiceAvailableLabels)
+                          DropdownMenuItem(value: y, child: Text(y)),
+                      ],
+                      onChanged: (v) {
+                        if (v != null) setState(() => _invoiceAvailableLabel = v);
+                      },
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 12),
                 SwitchListTile(
@@ -302,35 +247,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: provider.importCurrencies.isEmpty
-                          ? TextFormField(
-                              controller: _billedCurrencyManualCtrl,
-                              decoration: const InputDecoration(
-                                labelText: 'Billed currency',
-                                border: OutlineInputBorder(),
-                              ),
-                            )
-                          : InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Billed currency',
-                                border: OutlineInputBorder(),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  isExpanded: true,
-                                  value: provider.importCurrencies.contains(_billedCurrency)
-                                      ? _billedCurrency
-                                      : provider.importCurrencies.first,
-                                  items: [
-                                    for (final c in provider.importCurrencies)
-                                      DropdownMenuItem(value: c, child: Text(c)),
-                                  ],
-                                  onChanged: (v) {
-                                    if (v != null) setState(() => _billedCurrency = v);
-                                  },
-                                ),
-                              ),
-                            ),
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Billed currency',
+                          border: OutlineInputBorder(),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            isExpanded: true,
+                            value: _billedCurrency,
+                            items: [
+                              for (final c in SheetStaticOptions.importCurrencies)
+                                DropdownMenuItem(value: c, child: Text(c)),
+                            ],
+                            onChanged: (v) {
+                              if (v != null) setState(() => _billedCurrency = v);
+                            },
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
